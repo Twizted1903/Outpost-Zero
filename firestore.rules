@@ -1,0 +1,279 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global safety net: default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidUserStash(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.callsign is string && data.callsign.size() >= 1 && data.callsign.size() <= 24 &&
+             data.credits is int && data.credits >= 0 && data.credits <= 100000000 &&
+             data.matScrap is int && data.matScrap >= 0 && data.matScrap <= 100000 &&
+             data.matGunpowder is int && data.matGunpowder >= 0 && data.matGunpowder <= 100000 &&
+             data.matCloth is int && data.matCloth >= 0 && data.matCloth <= 100000 &&
+             data.matElectronics is int && data.matElectronics >= 0 && data.matElectronics <= 100000 &&
+             data.matHerbs is int && data.matHerbs >= 0 && data.matHerbs <= 100000 &&
+             data.ammoM4 is int && data.ammoM4 >= 0 && data.ammoM4 <= 10000 &&
+             data.ammoSmg is int && data.ammoSmg >= 0 && data.ammoSmg <= 10000 &&
+             data.ammoShotgun is int && data.ammoShotgun >= 0 && data.ammoShotgun <= 10000 &&
+             data.maxPantsLevel is int && data.maxPantsLevel >= 1 && data.maxPantsLevel <= 4 &&
+             data.unlockedWeaponKeys is list &&
+             data.unlockedWeaponKeys.size() <= 10 &&
+             (data.unlockedWeaponKeys.size() == 0 || data.unlockedWeaponKeys[0] is string);
+    }
+
+    function isValidMarketListing(data) {
+      return data.sellerId is string && data.sellerId.size() >= 1 && data.sellerId.size() <= 128 &&
+             data.sellerCallsign is string && data.sellerCallsign.size() >= 1 && data.sellerCallsign.size() <= 24 &&
+             data.buyerId is string && data.buyerId.size() <= 128 &&
+             data.category in ['WEAPON', 'PANTS', 'MEDKIT', 'FOOD', 'WATER', 'MATERIAL', 'CD'] &&
+             data.itemName is string && data.itemName.size() >= 1 && data.itemName.size() <= 60 &&
+             data.itemDetail is string && data.itemDetail.size() <= 80 &&
+             data.rarityLabel is string && data.rarityLabel.size() >= 1 && data.rarityLabel.size() <= 40 &&
+             data.weaponKey is string && data.weaponKey.size() <= 24 &&
+             data.materialKey is string && data.materialKey.size() <= 24 &&
+             data.cdId is int && data.cdId >= 0 && data.cdId <= 150 &&
+             data.pantsLevel is int && data.pantsLevel >= 0 && data.pantsLevel <= 4 &&
+             data.value is int && data.value >= 0 && data.value <= 100000 &&
+             data.quantity is int && data.quantity >= 1 && data.quantity <= 500 &&
+             data.priceCredits is int && data.priceCredits >= 1 && data.priceCredits <= 1000000 &&
+             data.status in ['ACTIVE', 'SOLD', 'CANCELLED'] &&
+             data.payoutClaimed is bool;
+    }
+
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+      allow list: if false;
+
+      allow create: if isSignedIn() &&
+                       isValidId(userId) &&
+                       request.auth.uid == userId &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().keys().hasAll([
+                         'userId', 'callsign', 'credits',
+                         'matScrap', 'matGunpowder', 'matCloth', 'matElectronics', 'matHerbs',
+                         'ammoM4', 'ammoSmg', 'ammoShotgun', 'maxPantsLevel',
+                         'unlockedWeaponKeys', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'callsign', 'credits',
+                         'matScrap', 'matGunpowder', 'matCloth', 'matElectronics', 'matHerbs',
+                         'ammoM4', 'ammoSmg', 'ammoShotgun', 'maxPantsLevel',
+                         'unlockedWeaponKeys', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().createdAt is timestamp && incoming().createdAt <= request.time &&
+                       incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                       isValidUserStash(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(userId) &&
+                       request.auth.uid == userId &&
+                       isValidUserStash(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+              incoming().diff(existing()).affectedKeys().hasOnly([
+                'callsign', 'credits',
+                'matScrap', 'matGunpowder', 'matCloth', 'matElectronics', 'matHerbs',
+                'ammoM4', 'ammoSmg', 'ammoShotgun', 'maxPantsLevel',
+                'unlockedWeaponKeys', 'updatedAt'
+              ]);
+
+      allow delete: if false;
+
+      match /notes/{noteId} {
+        allow get, list: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+
+        allow create: if isSignedIn() &&
+                         isValidId(userId) &&
+                         isValidId(noteId) &&
+                         request.auth.uid == userId &&
+                         incoming().userId == request.auth.uid &&
+                         incoming().keys().hasAll([
+                           'userId', 'title', 'body', 'category',
+                           'locationStamp', 'pinned', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'title', 'body', 'category',
+                           'locationStamp', 'pinned', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().createdAt is timestamp && incoming().createdAt <= request.time &&
+                         incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                         isValidFieldNote(incoming());
+
+        allow update: if isSignedIn() &&
+                         isValidId(userId) &&
+                         isValidId(noteId) &&
+                         request.auth.uid == userId &&
+                         isValidFieldNote(incoming()) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'title', 'body', 'category', 'locationStamp', 'pinned', 'updatedAt'
+                         ]);
+
+        allow delete: if isSignedIn() &&
+                         isValidId(userId) &&
+                         isValidId(noteId) &&
+                         request.auth.uid == userId;
+      }
+    }
+
+    function isValidFieldNote(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.title is string && data.title.size() <= 80 &&
+             data.body is string && data.body.size() >= 1 && data.body.size() <= 4000 &&
+             data.category in ['GENERAL', 'OAKRIDGE', 'LOOT', 'CRAFTING', 'MARKET', 'CD_HUNT'] &&
+             data.locationStamp is string && data.locationStamp.size() <= 80 &&
+             data.pinned is bool;
+    }
+
+    match /market_listings/{listingId} {
+      allow get: if isSignedIn() &&
+                    isValidId(listingId) &&
+                    (existing().status == 'ACTIVE' ||
+                     existing().sellerId == request.auth.uid ||
+                     existing().buyerId == request.auth.uid);
+
+      allow list: if isSignedIn() &&
+                     (existing().status == 'ACTIVE' ||
+                      existing().sellerId == request.auth.uid ||
+                      existing().buyerId == request.auth.uid);
+
+      allow create: if isSignedIn() &&
+                       isValidId(listingId) &&
+                       incoming().sellerId == request.auth.uid &&
+                       incoming().buyerId == '' &&
+                       incoming().status == 'ACTIVE' &&
+                       incoming().payoutClaimed == false &&
+                       incoming().keys().hasAll([
+                         'sellerId', 'sellerCallsign', 'buyerId', 'category',
+                         'itemName', 'itemDetail', 'rarityLabel',
+                         'weaponKey', 'materialKey', 'cdId', 'pantsLevel',
+                         'value', 'quantity', 'priceCredits',
+                         'status', 'payoutClaimed', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'sellerId', 'sellerCallsign', 'buyerId', 'category',
+                         'itemName', 'itemDetail', 'rarityLabel',
+                         'weaponKey', 'materialKey', 'cdId', 'pantsLevel',
+                         'value', 'quantity', 'priceCredits',
+                         'status', 'payoutClaimed', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().createdAt is timestamp && incoming().createdAt <= request.time &&
+                       incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                       isValidMarketListing(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(listingId) &&
+                       isValidMarketListing(incoming()) &&
+                       incoming().sellerId == existing().sellerId &&
+                       incoming().sellerCallsign == existing().sellerCallsign &&
+                       incoming().category == existing().category &&
+                       incoming().itemName == existing().itemName &&
+                       incoming().itemDetail == existing().itemDetail &&
+                       incoming().rarityLabel == existing().rarityLabel &&
+                       incoming().weaponKey == existing().weaponKey &&
+                       incoming().materialKey == existing().materialKey &&
+                       incoming().cdId == existing().cdId &&
+                       incoming().pantsLevel == existing().pantsLevel &&
+                       incoming().value == existing().value &&
+                       incoming().quantity == existing().quantity &&
+                       incoming().priceCredits == existing().priceCredits &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                       (
+                         // Action 1: Buyer purchases active listing from another player
+                         (existing().status == 'ACTIVE' &&
+                          existing().sellerId != request.auth.uid &&
+                          incoming().status == 'SOLD' &&
+                          incoming().buyerId == request.auth.uid &&
+                          incoming().payoutClaimed == false &&
+                          incoming().diff(existing()).affectedKeys().hasOnly(['status', 'buyerId', 'updatedAt'])) ||
+                         // Action 2: Seller cancels their active listing
+                         (existing().status == 'ACTIVE' &&
+                          existing().sellerId == request.auth.uid &&
+                          incoming().status == 'CANCELLED' &&
+                          incoming().buyerId == '' &&
+                          incoming().payoutClaimed == false &&
+                          incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])) ||
+                         // Action 3: Seller claims payout after sale
+                         (existing().status == 'SOLD' &&
+                          existing().payoutClaimed == false &&
+                          existing().sellerId == request.auth.uid &&
+                          incoming().status == 'SOLD' &&
+                          incoming().buyerId == existing().buyerId &&
+                          incoming().payoutClaimed == true &&
+                          incoming().diff(existing()).affectedKeys().hasOnly(['payoutClaimed', 'updatedAt']))
+                       );
+
+      allow delete: if false;
+    }
+
+    function isValidKillFeedEvent(data) {
+      return data.killerId is string && data.killerId.size() >= 1 && data.killerId.size() <= 128 &&
+             data.killerCallsign is string && data.killerCallsign.size() >= 1 && data.killerCallsign.size() <= 24 &&
+             data.victimId is string && data.victimId.size() >= 1 && data.victimId.size() <= 128 &&
+             data.victimCallsign is string && data.victimCallsign.size() >= 1 && data.victimCallsign.size() <= 24 &&
+             data.weaponKey is string && data.weaponKey.size() >= 1 && data.weaponKey.size() <= 40 &&
+             data.weaponName is string && data.weaponName.size() >= 1 && data.weaponName.size() <= 48 &&
+             data.zoneName is string && data.zoneName.size() <= 64 &&
+             data.feedScope == 'PUBLIC';
+    }
+
+    match /kill_feed/{eventId} {
+      allow get: if isSignedIn() &&
+                    isValidId(eventId) &&
+                    (existing().feedScope == 'PUBLIC' ||
+                     existing().killerId == request.auth.uid ||
+                     existing().victimId == request.auth.uid);
+
+      allow list: if isSignedIn() &&
+                     (existing().feedScope == 'PUBLIC' ||
+                      existing().killerId == request.auth.uid ||
+                      existing().victimId == request.auth.uid);
+
+      allow create: if isSignedIn() &&
+                       isValidId(eventId) &&
+                       incoming().killerId == request.auth.uid &&
+                       incoming().killerId != incoming().victimId &&
+                       incoming().feedScope == 'PUBLIC' &&
+                       incoming().keys().hasAll([
+                         'killerId', 'killerCallsign',
+                         'victimId', 'victimCallsign',
+                         'weaponKey', 'weaponName',
+                         'zoneName', 'feedScope', 'createdAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'killerId', 'killerCallsign',
+                         'victimId', 'victimCallsign',
+                         'weaponKey', 'weaponName',
+                         'zoneName', 'feedScope', 'createdAt'
+                       ]) &&
+                       incoming().createdAt is timestamp && incoming().createdAt <= request.time &&
+                       isValidKillFeedEvent(incoming());
+
+      allow update, delete: if false;
+    }
+  }
+}

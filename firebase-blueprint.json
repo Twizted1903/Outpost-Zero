@@ -1,0 +1,319 @@
+{
+  "entities": {
+    "UserStash": {
+      "title": "UserStash",
+      "description": "Cloud-synced Outpost Zero survival stash, unlocked armory, ammo, and crafting resource counts per authenticated player.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the owning player."
+        },
+        "callsign": {
+          "type": "string",
+          "description": "Active operator callsign displayed on market listings."
+        },
+        "credits": {
+          "type": "integer",
+          "description": "Player credit balance for market purchases and operator buy-backs."
+        },
+        "matScrap": {
+          "type": "integer",
+          "description": "Stockpiled Scrap Metal units."
+        },
+        "matGunpowder": {
+          "type": "integer",
+          "description": "Stockpiled Gunpowder & Primers units."
+        },
+        "matCloth": {
+          "type": "integer",
+          "description": "Stockpiled Tactical Cloth units."
+        },
+        "matElectronics": {
+          "type": "integer",
+          "description": "Stockpiled Electronic Parts units."
+        },
+        "matHerbs": {
+          "type": "integer",
+          "description": "Stockpiled Medical Herbs & Antiseptic units."
+        },
+        "ammoM4": {
+          "type": "integer",
+          "description": "Reserve 5.56mm ammunition rounds."
+        },
+        "ammoSmg": {
+          "type": "integer",
+          "description": "Reserve 9mm ammunition rounds."
+        },
+        "ammoShotgun": {
+          "type": "integer",
+          "description": "Reserve 12-gauge shells."
+        },
+        "maxPantsLevel": {
+          "type": "integer",
+          "description": "Highest unlocked Cargo Pants level (1 to 4 Safe Pockets)."
+        },
+        "unlockedWeaponKeys": {
+          "type": "array",
+          "description": "Unlocked weapon identifiers owned in the Outpost armory."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of initial stash creation via FieldValue.serverTimestamp()."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of last stash update via FieldValue.serverTimestamp()."
+        }
+      },
+      "required": [
+        "userId",
+        "callsign",
+        "credits",
+        "matScrap",
+        "matGunpowder",
+        "matCloth",
+        "matElectronics",
+        "matHerbs",
+        "ammoM4",
+        "ammoSmg",
+        "ammoShotgun",
+        "maxPantsLevel",
+        "unlockedWeaponKeys",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "MarketListing": {
+      "title": "MarketListing",
+      "description": "Live player-built marketplace listing for crafted weapons, cargo pants, medical supplies, base materials, or CDs.",
+      "type": "object",
+      "properties": {
+        "sellerId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the player who posted the listing."
+        },
+        "sellerCallsign": {
+          "type": "string",
+          "description": "Seller callsign shown in the live market feed."
+        },
+        "buyerId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the buyer once sold, or empty string while active."
+        },
+        "category": {
+          "type": "string",
+          "enum": ["WEAPON", "PANTS", "MEDKIT", "FOOD", "WATER", "MATERIAL", "CD"],
+          "description": "Item category for marketplace filtering."
+        },
+        "itemName": {
+          "type": "string",
+          "description": "Display name of the listed item."
+        },
+        "itemDetail": {
+          "type": "string",
+          "description": "Short tactical description or effect summary."
+        },
+        "rarityLabel": {
+          "type": "string",
+          "description": "Item rarity label displayed in the market and 3D inspector."
+        },
+        "weaponKey": {
+          "type": "string",
+          "description": "Weapon key when category is WEAPON, or empty string."
+        },
+        "materialKey": {
+          "type": "string",
+          "description": "Material key when category is MATERIAL, or empty string."
+        },
+        "cdId": {
+          "type": "integer",
+          "description": "CD catalog number (1-150) when category is CD, or 0."
+        },
+        "pantsLevel": {
+          "type": "integer",
+          "description": "Cargo pants level (1-4) when category is PANTS, or 0."
+        },
+        "value": {
+          "type": "integer",
+          "description": "Restore power or base value of the listed item."
+        },
+        "quantity": {
+          "type": "integer",
+          "description": "Number of units included in this listing."
+        },
+        "priceCredits": {
+          "type": "integer",
+          "description": "Player-set sale price in Outpost Credits."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["ACTIVE", "SOLD", "CANCELLED"],
+          "description": "Lifecycle state of the listing."
+        },
+        "payoutClaimed": {
+          "type": "boolean",
+          "description": "Whether the seller has collected sale credits after SOLD."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of listing creation via FieldValue.serverTimestamp()."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of latest listing transition via FieldValue.serverTimestamp()."
+        }
+      },
+      "required": [
+        "sellerId",
+        "sellerCallsign",
+        "buyerId",
+        "category",
+        "itemName",
+        "itemDetail",
+        "rarityLabel",
+        "weaponKey",
+        "materialKey",
+        "cdId",
+        "pantsLevel",
+        "value",
+        "quantity",
+        "priceCredits",
+        "status",
+        "payoutClaimed",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "FieldNote": {
+      "title": "FieldNote",
+      "description": "Player-authored survival and tactical notes persisted per user under Outpost Zero Notes Mode.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the owning player."
+        },
+        "title": {
+          "type": "string",
+          "description": "Short headline for the note (can be empty if untitled)."
+        },
+        "body": {
+          "type": "string",
+          "description": "Main note content entered by the player."
+        },
+        "category": {
+          "type": "string",
+          "enum": ["GENERAL", "OAKRIDGE", "LOOT", "CRAFTING", "MARKET", "CD_HUNT"],
+          "description": "Tactical tag category for filtering notes."
+        },
+        "locationStamp": {
+          "type": "string",
+          "description": "Optional in-game zone and floor stamp when note was recorded."
+        },
+        "pinned": {
+          "type": "boolean",
+          "description": "Whether the note is pinned to the top of the logbook."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of note creation via FieldValue.serverTimestamp()."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of latest note edit via FieldValue.serverTimestamp()."
+        }
+      },
+      "required": [
+        "userId",
+        "title",
+        "body",
+        "category",
+        "locationStamp",
+        "pinned",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "KillFeedEvent": {
+      "title": "KillFeedEvent",
+      "description": "Live PvP combat kill feed event showing which player killed which player and with what weapon.",
+      "type": "object",
+      "properties": {
+        "killerId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the victorious operator."
+        },
+        "killerCallsign": {
+          "type": "string",
+          "description": "Callsign of the player who scored the kill."
+        },
+        "victimId": {
+          "type": "string",
+          "description": "Unique UID or rival ID of the eliminated player."
+        },
+        "victimCallsign": {
+          "type": "string",
+          "description": "Callsign of the player who was killed."
+        },
+        "weaponKey": {
+          "type": "string",
+          "description": "WeaponId key used in the elimination."
+        },
+        "weaponName": {
+          "type": "string",
+          "description": "Weapon display name shown in the live kill feed."
+        },
+        "zoneName": {
+          "type": "string",
+          "description": "Oakridge sector or building where the kill occurred."
+        },
+        "feedScope": {
+          "type": "string",
+          "enum": ["PUBLIC"],
+          "description": "Broadcast scope for the live server-wide PvP kill feed."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of the kill event via FieldValue.serverTimestamp()."
+        }
+      },
+      "required": [
+        "killerId",
+        "killerCallsign",
+        "victimId",
+        "victimCallsign",
+        "weaponKey",
+        "weaponName",
+        "zoneName",
+        "feedScope",
+        "createdAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserStash" },
+      "description": "Authenticated user's Outpost Zero cloud stash, crafting resources, and credits."
+    },
+    "/users/{userId}/notes/{noteId}": {
+      "schema": { "$ref": "#/entities/FieldNote" },
+      "description": "Private tactical field notes owned by the authenticated player."
+    },
+    "/market_listings/{listingId}": {
+      "schema": { "$ref": "#/entities/MarketListing" },
+      "description": "Shared live player-built marketplace listings."
+    },
+    "/kill_feed/{eventId}": {
+      "schema": { "$ref": "#/entities/KillFeedEvent" },
+      "description": "Real-time shared PvP kill feed broadcast across all players."
+    }
+  }
+}
